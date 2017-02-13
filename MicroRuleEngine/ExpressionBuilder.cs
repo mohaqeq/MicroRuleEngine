@@ -24,21 +24,24 @@ namespace MicroRuleEngine
             ExpressionType.OrElse
         };
 
-        public static Expression Build<T>(Rule rule, ParameterExpression parameterExpression)
+        public static Expression Build<T>(Rule rule, ParameterExpression parameterExpression, bool withValue)
         {
             ExpressionType nestedOperator;
             return Enum.TryParse(rule.Operator, out nestedOperator) &&
                     NestedOperators.Contains(nestedOperator) &&
                     rule.Rules != null &&
                     rule.Rules.Any()
-                       ? Build<T>(rule.Rules, parameterExpression, nestedOperator)
-                       : BuildExpression<T>(rule, parameterExpression);
+                       ? withValue
+                            ? BuildSetValue(rule, Build<T>(rule.Rules, parameterExpression, nestedOperator, withValue))
+                            : Build<T>(rule.Rules, parameterExpression, nestedOperator, withValue)
+                       : withValue
+                            ? BuildSetValue(rule, BuildExpression<T>(rule, parameterExpression))
+                            : BuildExpression<T>(rule, parameterExpression);
         }
 
-        public static Expression Build<T>(IEnumerable<Rule> rules, ParameterExpression parameterExpression, ExpressionType operation)
+        public static Expression Build<T>(IEnumerable<Rule> rules, ParameterExpression parameterExpression, ExpressionType operation, bool withValue)
         {
-            var expressions = rules.Select(r => Build<T>(r, parameterExpression));
-
+            var expressions = rules.Select(r => Build<T>(r, parameterExpression, withValue));
             return Build(expressions, operation);
         }
 
@@ -157,6 +160,15 @@ namespace MicroRuleEngine
                 : Expression.Constant(propType.IsEnum
                     ? Enum.Parse(propType, value)
                     : Convert.ChangeType(value, propType));
+        }
+
+        private static Expression BuildSetValue(Rule rule, Expression exp)
+        {
+            return rule != null
+                ? Expression.Convert(Expression.Assign(
+                      Expression.Property(Expression.Constant(rule), "Result"),
+                      Expression.Convert(exp, typeof(bool?))), typeof(bool))
+                : exp;
         }
     }
 }
