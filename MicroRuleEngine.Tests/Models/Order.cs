@@ -14,6 +14,7 @@ namespace MicroRuleEngine.Tests.Models
         public int OrderId { get; set; }
         public Customer Customer { get; set; }
         public List<Item> Items { get; set; }
+        public IEnumerable<decimal> Prices { get; set; }
 
         public bool HasItem(string itemCode)
         {

@@ -32,11 +32,11 @@ namespace MicroRuleEngine.Tests
         {
             Order order = GetOrder();
             Rule rule = new Rule
-                            {
-                                MemberName = "Customer.Country.CountryCode",
-                                Operator = ExpressionType.Equal.ToString("g"),
-                                TargetValue = "AUS"
-                            };
+            {
+                MemberName = "Customer.Country.CountryCode",
+                Operator = ExpressionType.Equal.ToString("g"),
+                TargetValue = "AUS"
+            };
             var compiledRule = MRE.Instance.Compile<Order>(rule);
             bool passes = compiledRule(order);
             Assert.IsTrue(passes);
@@ -51,38 +51,37 @@ namespace MicroRuleEngine.Tests
         {
             Order order = GetOrder();
             Rule rule = new Rule
+            {
+                Operator = ExpressionType.AndAlso.ToString("g"),
+                Rules =                   new List<Rule>
+                {
+                    new Rule
+                    {
+                        MemberName = "Customer.LastName",
+                        TargetValue = "Doe",
+                        Operator = "Equal"
+                    },
+                    new Rule
+                    {
+                        Operator = "Or",
+                        Rules = new List<Rule>
+                        {
+                            new Rule
                             {
-                                Operator = ExpressionType.AndAlso.ToString("g"),
-                                Rules =
-                                    new List<Rule>
-                                        {
-                                            new Rule
-                                                {
-                                                    MemberName = "Customer.LastName",
-                                                    TargetValue = "Doe",
-                                                    Operator = "Equal"
-                                                },
-                                            new Rule
-                                                {
-                                                    Operator = "Or",
-                                                    Rules = new List<Rule>
-                                                                {
-                                                                    new Rule
-                                                                        {
-                                                                            MemberName = "Customer.FirstName",
-                                                                            TargetValue = "John",
-                                                                            Operator = "Equal"
-                                                                        },
-                                                                    new Rule
-                                                                        {
-                                                                            MemberName = "Customer.FirstName",
-                                                                            TargetValue = "Jane",
-                                                                            Operator = "Equal"
-                                                                        }
-                                                                }
-                                                }
-                                        }
-                            };
+                                MemberName = "Customer.FirstName",
+                                TargetValue = "John",
+                                Operator = "Equal"
+                            },
+                            new Rule
+                            {
+                                MemberName = "Customer.FirstName",
+                                TargetValue = "Jane",
+                                Operator = "Equal"
+                            }
+                        }
+                    }
+                }
+            };
             var fakeName = MRE.Instance.Compile<Order>(rule);
             bool passes = fakeName(order);
             Assert.IsTrue(passes);
@@ -97,10 +96,10 @@ namespace MicroRuleEngine.Tests
         {
             Order order = GetOrder();
             Rule rule = new Rule
-                            {
-                                Operator = "HasItem", //The Order Object Contains a method named 'HasItem' that returns true/false
-                                Inputs = new List<object> { "Test" }
-                            };
+            {
+                Operator = "HasItem", //The Order Object Contains a method named 'HasItem' that returns true/false
+                Inputs = new List<object> { "Test" }
+            };
             var boolMethod = MRE.Instance.Compile<Order>(rule);
             bool passes = boolMethod(order);
             Assert.IsTrue(passes);
@@ -116,11 +115,11 @@ namespace MicroRuleEngine.Tests
         {
             Order order = GetOrder();
             Rule rule = new Rule
-                            {
-                                MemberName = "Customer.FirstName",
-                                Operator = "EndsWith", //Regular method that exists on string.. As a note expression methods are not available
-                                Inputs = new List<object> { "ohn" }
-                            };
+            {
+                MemberName = "Customer.FirstName",
+                Operator = "EndsWith", //Regular method that exists on string.. As a note expression methods are not available
+                Inputs = new List<object> { "ohn" }
+            };
             var childPropCheck = MRE.Instance.Compile<Order>(rule);
             bool passes = childPropCheck(order);
             Assert.IsTrue(passes);
@@ -146,15 +145,16 @@ namespace MicroRuleEngine.Tests
             Assert.IsFalse(passes);
         }
 
+        [TestMethod]
         public void RegexIsMatch() //Had to add a Regex evaluator to make it feel 'Complete'
         {
             Order order = GetOrder();
             Rule rule = new Rule
-                            {
-                                MemberName = "Customer.FirstName",
-                                Operator = "IsMatch",
-                                TargetValue = @"^[a-zA-Z0-9]*$"
-                            };
+            {
+                MemberName = "Customer.FirstName",
+                Operator = "IsMatch",
+                TargetValue = @"^[a-zA-Z0-9]*$"
+            };
             var regexCheck = MRE.Instance.Compile<Order>(rule);
             bool passes = regexCheck(order);
             Assert.IsTrue(passes);
@@ -164,19 +164,91 @@ namespace MicroRuleEngine.Tests
             Assert.IsFalse(passes);
         }
 
+        [TestMethod]
+        public void CollectionItemMethods()
+        {
+            Order order = this.GetOrder();
+            Rule rule = new Rule()
+            {
+                Operator = "Any",
+                MemberName = "Items",
+                Rules = new List<Rule> {
+                    new Rule
+                    {
+                        Operator = "Equal",
+                        MemberName ="ItemCode",
+                        TargetValue="Test"
+                    },
+                    new Rule
+                    {
+                        Operator ="GreaterThan",
+                        MemberName = "Cost",
+                        TargetValue = "3.00"
+                    }
+                }
+            };
+            var boolMethod = RuleCompiler.Compile<Order>(rule, true);
+            bool passes = boolMethod(order);
+            Assert.IsTrue(passes);
+
+            var item = order.Items.First(x => x.ItemCode == "Test");
+            item.ItemCode = "Changed";
+
+            passes = boolMethod(order);
+            Assert.IsFalse(passes);
+        }
+
+        [TestMethod]
+        public void CollectionAggregateMethods()
+        {
+            Order order = this.GetOrder();
+            Rule rule = new Rule()
+            {
+                Operator = "Equal",
+                MemberName = "Prices.Sum",
+                TargetValue = "51.5"
+            };
+            var boolMethod = RuleCompiler.Compile<Order>(rule, true);
+            bool passes = boolMethod(order);
+            Assert.IsTrue(passes);
+        }
+
+        [TestMethod]
+        public void CollectionGenericMethods()
+        {
+            Order order = this.GetOrder();
+            Rule rule = new Rule()
+            {
+                Operator = "Equal",
+                MemberName = "Prices.First",
+                TargetValue = "10.2"
+            };
+            var boolMethod = RuleCompiler.Compile<Order>(rule, true);
+            bool passes = boolMethod(order);
+            Assert.IsTrue(passes);
+        }
+
         public Order GetOrder()
         {
             return new Order
-                       {
-                           OrderId = 1,
-                           Customer = Customer.Make("John", "Doe", "AUS"),
-                           Items = new List<Item>
-                                       {
-                                           Item.Make("MM23", 5.25M),
-                                           Item.Make("LD45", 5.25M),
-                                           Item.Make("Test", 3.33M),
-                                       }
-                       };
+            {
+                OrderId = 1,
+                Customer = Customer.Make("John", "Doe", "AUS"),
+                Items = new List<Item>
+                {
+                    Item.Make("MM23", 5.25M),
+                    Item.Make("LD45", 5.25M),
+                    Item.Make("Test", 3.33M),
+                },
+                Prices = new decimal[]
+                {
+                    10.2M,
+                    5,
+                    6.3M,
+                    8,
+                    22
+                },
+            };
         }
     }
 }
