@@ -199,6 +199,24 @@ namespace MicroRuleEngine.Tests
         }
 
         [TestMethod]
+        public void CollectionItemExists()
+        {
+            Order order = this.GetOrder();
+            Rule rule = new Rule()
+            {
+                Operator = "Any",
+                MemberName = "Items",
+            };
+            var boolMethod = RuleCompiler.Compile<Order>(rule, true);
+            bool passes = boolMethod(order);
+            Assert.IsTrue(passes);
+
+            order.Items.Clear();
+            passes = boolMethod(order);
+            Assert.IsFalse(passes);
+        }
+
+        [TestMethod]
         public void CollectionAggregateMethods()
         {
             Order order = this.GetOrder();

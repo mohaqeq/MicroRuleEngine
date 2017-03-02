@@ -121,14 +121,22 @@ namespace MicroRuleEngine
             {
                 var elementType = ElementType(propType);
                 var lambdaParam = Expression.Parameter(elementType, "lambdaParam");
-                return Expression.Call(
-                    typeof(Enumerable).GetMethods().First(m =>
-                                m.Name == rule.Operator
-                                && m.GetParameters().Count() == 2
-                    ).MakeGenericMethod(elementType),
-                    propExpression,
-                    Expression.Lambda(Build(elementType, rule.Rules, lambdaParam, ExpressionType.AndAlso, true), lambdaParam)
-                );
+                return rule?.Rules?.Any() == true
+                    ? Expression.Call(
+                        typeof(Enumerable).GetMethods().First(m =>
+                                    m.Name == rule.Operator
+                                    && m.GetParameters().Count() == 2
+                        ).MakeGenericMethod(elementType),
+                        propExpression,
+                        Expression.Lambda(Build(elementType, rule.Rules, lambdaParam, ExpressionType.AndAlso, true), lambdaParam)
+                    )
+                    : Expression.Call(
+                        typeof(Enumerable).GetMethods().First(m =>
+                                    m.Name == rule.Operator
+                                    && m.GetParameters().Count() == 1
+                        ).MakeGenericMethod(elementType),
+                        propExpression
+                    );
             }
             // Invoke a method on the Property
             var inputs = rule.Inputs.Select(x => x.GetType()).ToArray();
